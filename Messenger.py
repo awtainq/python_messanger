@@ -3,7 +3,7 @@ from tkinter import messagebox
 from tkinter.simpledialog import askstring
 import datetime
 from database import DatabaseManager
-from message_verify import MessageChecker
+from message_verify import check_message
 import json
 
 db = DatabaseManager('users.db')
@@ -183,7 +183,7 @@ class Messenger:
     def comment_message(self, message_id):
         comment_text = askstring("Add Comment", "Enter your comment:")
         if comment_text:
-            if MessageChecker.check_message(comment_text):
+            if check_message(comment_text):
                 current_time = datetime.datetime.now()
                 db.cursor.execute("INSERT INTO Comments (message_id, comment, user_id, time) VALUES (?, ?, ?, ?)",
                                 (message_id, comment_text, self.user_id, current_time))
@@ -197,7 +197,7 @@ class Messenger:
     def send_message(self):
         message_text = self.message_entry.get()
         if message_text.strip():
-            if MessageChecker.check_message(message_text):
+            if check_message(message_text):
                 current_time = datetime.datetime.now()
                 db.cursor.execute("INSERT INTO Messages (chat_id, message, user_id, time) VALUES (?, ?, ?, ?)",
                             (self.current_chat_id, message_text, self.user_id, current_time))

@@ -55,6 +55,15 @@ class PasswordManager:
         self.exit.pack()
 
     def safe(self):
+        if not self.entry1.get() or not self.entry2.get():
+            messagebox.showerror("Error", "Empty fields")
+            return
+        if db.cursor.execute("SELECT login FROM Users WHERE login = ?", (self.entry1.get(),)).fetchone():
+            messagebox.showerror("Error", "User already exists")
+            return
+        if len(self.entry2.get()) < 8:
+            messagebox.showerror("Error", "Password must be at least 8 characters long")
+            return
         salt = uuid.uuid4().hex
         db.cursor.execute("INSERT INTO Users (login, password_hash, salt) VALUES (?, ?, ?)", (self.entry1.get(), self.hash_password(self.entry2.get(), salt), salt))
         db.commit()
