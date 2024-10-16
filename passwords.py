@@ -67,16 +67,10 @@ class PasswordManager:
         salt = uuid.uuid4().hex
         db.cursor.execute("INSERT INTO Users (login, password_hash, salt) VALUES (?, ?, ?)", (self.entry1.get(), self.hash_password(self.entry2.get(), salt), salt))
         db.commit()
-        self.label1.pack_forget()
-        self.entry1.pack_forget()
-        self.label2.pack_forget()
-        self.entry2.pack_forget()
-        self.ok.pack_forget()
-        self.signup.pack()
-        self.signin.pack()
-        self.entry1.delete(0, END)
-        self.entry2.delete(0, END)
         messagebox.showinfo("Saved", "Credentials saved successfully")
+        user_id, username = db.cursor.execute("SELECT user_id, login FROM Users WHERE login = ?", (self.entry1.get(),)).fetchone()
+        self.root.destroy()
+        self.open_messanger(user_id, username)
 
     def cls(self):
         self.label1.pack_forget()

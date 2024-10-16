@@ -13,7 +13,7 @@ class Messenger:
         self.root = root
         self.user_id = user_id
         self.username = username
-        self.root.title('Messenger')
+        self.root.title(f'{username} - Messenger')
         self.center_window(1200, 600)
 
         self.current_chat_id = None
@@ -73,6 +73,8 @@ class Messenger:
         self.refresh_chat_list()
 
         self.messages_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.canvas.bind("<Enter>", lambda e: self._bind_mousewheel())
+        self.canvas.bind("<Leave>", lambda e: self._unbind_mousewheel())
 
     def center_window(self, width, height):
         screen_width = self.root.winfo_screenwidth()
@@ -127,27 +129,61 @@ class Messenger:
         row = 0
         for message_text, sender_login, message_time, message_id in messages:
             likes = self.get_likes_count(message_id)
-            display_text = f": {likes} | {message_time[:-7]} {sender_login}: {message_text}"
 
-            message_label = Label(self.messages_frame, text=display_text, anchor="w", justify=LEFT)
-            message_label.grid(row=row, column=2, sticky="w")
+            message_likes = Label(self.messages_frame, text=f": {likes}", anchor="w", justify=LEFT, font=("Helvetica", 11))
+            message_likes.grid(row=row, column=3, sticky="w")
             
+            message_time_label = Label(self.messages_frame, text=message_time[5:-10], anchor="w", justify=LEFT, font=("Helvetica", 9))
+            message_time_label.grid(row=row, column=0, sticky="w")
+
+            message_user = Label(self.messages_frame, text=f"{sender_login}:", anchor="w", justify=LEFT, font=("Helvetica", 12, "bold"))
+            message_user.grid(row=row, column=4, sticky="w")
+
+            message_text_label = Label(self.messages_frame, text=message_text, anchor="w", justify=LEFT, wraplength=self.root.winfo_width()-500)
+            message_text_label.grid(row=row, column=5, columnspan=3, sticky="w")
+            message_text_label.bind("<Button-1>", lambda e, text=message_text: self.copy_to_clipboard(text))
+
             like_button = Button(self.messages_frame, text='👍', command=lambda mid=message_id: self.like_message(mid, self.user_id))
-            like_button.grid(row=row, column=1, sticky="e")
+            like_button.grid(row=row, column=2, sticky="e")
             
             comment_button = Button(self.messages_frame, text='🗨', command=lambda mid=message_id: self.comment_message(mid))
-            comment_button.grid(row=row, column=0, sticky="e")
+            comment_button.grid(row=row, column=1, sticky="e")
 
             row += 1
 
             comments = self.get_comments(message_id)
             for comment in comments:
-                comment_label = Label(self.messages_frame, text=f"\t{comment['user']}: {comment['text']}", anchor="w", justify=LEFT)
-                comment_label.grid(row=row, column=2, columnspan=3, sticky='w')
+                comment_user_label = Label(self.messages_frame, text=f"{comment['user']}:", anchor="w", justify=LEFT, font=("Helvetica", 12, "bold"))
+                comment_user_label.grid(row=row, column=1, sticky='w')
+
+                comment_text_label = Label(self.messages_frame, text=f"{comment['text']}", anchor="w", justify=LEFT, wraplength=self.root.winfo_width()-450)
+                comment_text_label.grid(row=row, column=2, columnspan=4, sticky='w')
+                comment_text_label.bind("<Button-1>", lambda e, text=comment['text']: self.copy_to_clipboard(text))
                 row += 1
 
         self.canvas.update_idletasks()
         self.canvas.yview_moveto(1)
+
+    def _bind_mousewheel(self):
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.canvas.bind_all("<Button-4>", self._on_mousewheel)
+        self.canvas.bind_all("<Button-5>", self._on_mousewheel)
+
+    def _unbind_mousewheel(self):
+        self.canvas.unbind_all("<MouseWheel>")
+        self.canvas.unbind_all("<Button-4>")
+        self.canvas.unbind_all("<Button-5>")
+
+    def _on_mousewheel(self, event):
+        if event.delta:
+            delta = event.delta
+        else:
+            delta = -120 if event.num == 5 else 120
+        current_view = self.canvas.yview()
+        if delta > 0 and current_view[0] > 0: 
+            self.canvas.yview_scroll(-1, "units")
+        elif delta < 0 and current_view[1] < 1:
+            self.canvas.yview_scroll(1, "units")
 
     def like_message(self, message_id, user_id):
         db.cursor.execute("SELECT likes FROM Messages WHERE id = ?", (message_id,))
@@ -208,3 +244,10 @@ class Messenger:
                 messagebox.showwarning("Warning", "Message contains forbidden words")
         else:
             messagebox.showwarning("Warning", "Cannot send empty message")
+
+if __name__ == '__main__':
+    root = Tk()
+    root.grid_rowconfigure(0, weight=1)
+    root.grid_columnconfigure(1, weight=1)
+    Messenger(root, 1, 'admin')
+    root.mainloop()

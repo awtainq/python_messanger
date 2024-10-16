@@ -1,9 +1,11 @@
 from censure import Censor
 
-censor = Censor.get(lang='ru')
+censor_ru = Censor.get(lang='ru')
+censor_en = Censor.get(lang='en')
 def check_message(message):
-    line_info = censor.check_line(message)
-    if line_info['is_good']:
+    line_ru = censor_ru.check_line(message)
+    line_en = censor_en.check_line(message)
+    if line_ru['is_good'] and line_en['is_good']:
         return True
     else:
         return False
