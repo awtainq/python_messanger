@@ -13,8 +13,8 @@ class PasswordManager:
         self.root.title('Passwords')
         self.center_window(250, 150)
 
-        self.label1 = Label(root, text='Login:', anchor='center')
-        self.label2 = Label(root, text='Password:', anchor='center')
+        self.label1 = Label(root, text='Login:')
+        self.label2 = Label(root, text='Password:')
         self.entry1 = Entry(root)
         self.entry2 = Entry(root, show='*')
         self.signup = Button(root, text='Sign up', command=self.up)
@@ -23,8 +23,8 @@ class PasswordManager:
         self.ok_in = Button(root, text='Ok', command=self.check)
         self.exit = Button(root, text='Exit', command=self.cls)
 
-        self.signup.pack()
-        self.signin.pack()
+        self.signup.pack(anchor='center', expand=True, fill='both')
+        self.signin.pack(anchor='center', expand=True, fill='both')
 
     def center_window(self, width, height):
         screen_width = self.root.winfo_screenwidth()
@@ -78,8 +78,8 @@ class PasswordManager:
         self.entry1.pack_forget()
         self.entry2.pack_forget()
         self.ok_in.pack_forget()
-        self.signup.pack()
-        self.signin.pack()
+        self.signup.pack(anchor='center', expand=True, fill='both')
+        self.signin.pack(anchor='center', expand=True, fill='both')
         self.entry1.delete(0, END)
         self.entry2.delete(0, END)
         self.exit.pack_forget()

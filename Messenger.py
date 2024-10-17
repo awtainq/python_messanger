@@ -5,6 +5,7 @@ import datetime
 from database import DatabaseManager
 from message_verify import check_message
 import json
+from time import sleep
 
 db = DatabaseManager('users.db')
 
@@ -65,8 +66,8 @@ class Messenger:
         self.send_button = Button(self.input_frame, text='Send', command=self.send_message)
         self.send_button.grid(row=0, column=1)
 
-        self.message_entry.config(state='disabled')
-        self.send_button.config(state='disabled')
+        self.message_entry.config(state='normal')
+        self.send_button.config(state='normal')
 
         self.chat_ids = []
 
@@ -109,6 +110,7 @@ class Messenger:
             self.load_messages()
             self.message_entry.config(state='normal')
             self.send_button.config(state='normal')
+            self.root.after(100, self.message_entry.focus_set)
         else:
             self.current_chat_id = None
             for widget in self.messages_frame.winfo_children():
@@ -162,7 +164,17 @@ class Messenger:
                 row += 1
 
         self.canvas.update_idletasks()
-        self.canvas.yview_moveto(1)
+        self.message_entry.focus_set()
+
+        bbox = self.canvas.bbox("all")
+        if bbox:
+            canvas_height = self.canvas.winfo_height()
+            content_height = bbox[3] - bbox[1]
+            if content_height > canvas_height:
+                self.canvas.yview_moveto(1)
+            else:
+                self.canvas.yview_moveto(0)
+
 
     def _bind_mousewheel(self):
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
