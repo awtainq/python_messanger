@@ -5,7 +5,7 @@ import datetime
 from database import DatabaseManager
 from message_verify import check_message
 import json
-from time import sleep
+from messages import generate_message_canvas
 
 db = DatabaseManager('users.db')
 
@@ -18,7 +18,8 @@ class Messenger:
         self.center_window(1200, 600)
 
         self.current_chat_id = None
-
+        self.scroll_positions = {}
+        
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
 
@@ -107,7 +108,7 @@ class Messenger:
         if selection:
             index = selection[0]
             self.current_chat_id = self.chat_ids[index]
-            self.load_messages()
+            self.load_messages(self.current_chat_id)
             self.message_entry.config(state='normal')
             self.send_button.config(state='normal')
             self.root.after(100, self.message_entry.focus_set)
@@ -118,7 +119,11 @@ class Messenger:
             self.message_entry.config(state='disabled')
             self.send_button.config(state='disabled')
 
-    def load_messages(self):
+    def load_messages(self, chat_id):
+        if self.current_chat_id is not None:
+            self.scroll_positions[self.current_chat_id] = self.canvas.yview()
+            print(self.scroll_positions)
+
         for widget in self.messages_frame.winfo_children():
             widget.destroy()
         messages = db.cursor.execute("""
@@ -128,45 +133,21 @@ class Messenger:
             WHERE Messages.chat_id = ? 
             ORDER BY Messages.time
         """, (self.current_chat_id,)).fetchall()
-        row = 0
+
         for message_text, sender_login, message_time, message_id in messages:
-            likes = self.get_likes_count(message_id)
-
-            message_likes = Label(self.messages_frame, text=f": {likes}", anchor="w", justify=LEFT, font=("Helvetica", 11))
-            message_likes.grid(row=row, column=3, sticky="w")
-            
-            message_time_label = Label(self.messages_frame, text=message_time[5:-10], anchor="w", justify=LEFT, font=("Helvetica", 9))
-            message_time_label.grid(row=row, column=0, sticky="w")
-
-            message_user = Label(self.messages_frame, text=f"{sender_login}:", anchor="w", justify=LEFT, font=("Helvetica", 12, "bold"))
-            message_user.grid(row=row, column=4, sticky="w")
-
-            message_text_label = Label(self.messages_frame, text=message_text, anchor="w", justify=LEFT, wraplength=self.root.winfo_width()-500)
-            message_text_label.grid(row=row, column=5, columnspan=3, sticky="w")
-            message_text_label.bind("<Button-1>", lambda e, text=message_text: self.copy_to_clipboard(text))
-
-            like_button = Button(self.messages_frame, text='👍', command=lambda mid=message_id: self.like_message(mid, self.user_id))
-            like_button.grid(row=row, column=2, sticky="e")
-            
-            comment_button = Button(self.messages_frame, text='🗨', command=lambda mid=message_id: self.comment_message(mid))
-            comment_button.grid(row=row, column=1, sticky="e")
-
-            row += 1
-
-            comments = self.get_comments(message_id)
-            for comment in comments:
-                comment_user_label = Label(self.messages_frame, text=f"{comment['user']}:", anchor="w", justify=LEFT, font=("Helvetica", 12, "bold"))
-                comment_user_label.grid(row=row, column=1, sticky='w')
-
-                comment_text_label = Label(self.messages_frame, text=f"{comment['text']}", anchor="w", justify=LEFT, wraplength=self.root.winfo_width()-450)
-                comment_text_label.grid(row=row, column=2, columnspan=4, sticky='w')
-                comment_text_label.bind("<Button-1>", lambda e, text=comment['text']: self.copy_to_clipboard(text))
-                row += 1
+            generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text, self.get_likes_count(message_id), 0, lambda mid=message_id: self.like_message(mid, self.user_id), 1+1).pack()
 
         self.canvas.update_idletasks()
         self.message_entry.focus_set()
 
         bbox = self.canvas.bbox("all")
+        if chat_id in self.scroll_positions:
+            self.canvas.yview_moveto(self.scroll_positions[chat_id][0])
+        else:
+            self.scroll_to_bottom()
+
+    def scroll_to_bottom(self):
+        bbox = self.canvas.bbox('all')
         if bbox:
             canvas_height = self.canvas.winfo_height()
             content_height = bbox[3] - bbox[1]
@@ -174,6 +155,7 @@ class Messenger:
                 self.canvas.yview_moveto(1)
             else:
                 self.canvas.yview_moveto(0)
+
 
 
     def _bind_mousewheel(self):
@@ -200,7 +182,7 @@ class Messenger:
     def like_message(self, message_id, user_id):
         db.cursor.execute("SELECT likes FROM Messages WHERE id = ?", (message_id,))
         result = db.cursor.fetchone()
-        
+
         likes = json.loads(result[0]) if result[0] else []
         if user_id in likes:
             likes.remove(user_id)
@@ -208,7 +190,7 @@ class Messenger:
             likes.append(user_id)
         db.cursor.execute("UPDATE Messages SET likes = ? WHERE id = ?", (json.dumps(likes), message_id))
         db.commit()
-        self.load_messages()
+        self.load_messages(self.current_chat_id)
 
     def get_likes_count(self, message_id):
         db.cursor.execute("SELECT likes FROM Messages WHERE id = ?", (message_id,))
@@ -237,7 +219,7 @@ class Messenger:
                                 (message_id, comment_text, self.user_id, current_time))
                 db.commit()
                 messagebox.showinfo("Comment", "Comment added successfully")
-                self.load_messages()
+                self.load_messages(self.current_chat_id)
             else: messagebox.showwarning("Warning",)
         else:
             messagebox.showwarning("Warning", "Comment cannot be empty")
@@ -251,7 +233,7 @@ class Messenger:
                             (self.current_chat_id, message_text, self.user_id, current_time))
                 db.commit()
                 self.message_entry.delete(0, END)
-                self.load_messages()
+                self.load_messages(self.current_chat_id)
             else:
                 messagebox.showwarning("Warning", "Message contains forbidden words")
         else:
