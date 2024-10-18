@@ -139,3 +139,40 @@ def truncate_text(text, max_width, font, canvas):
             break
         truncated_text = test_text
     return truncated_text
+
+class CustomScrollbar(tk.Canvas):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.scrollbar = None
+        self.scroll_pos = 0
+        self.bind("<Configure>", self._update_scrollbar)
+        self.bind("<Button-1>", self._start_scroll)
+        self.bind("<B1-Motion>", self._scroll)
+
+    def _update_scrollbar(self, event=None):
+        self.delete("scrollbar")
+        if self.scrollbar:
+            self.delete(self.scrollbar)
+        # Устанавливаем размеры скроллбара в зависимости от размера области
+        view_size = self.winfo_height()
+        scrollbar_height = view_size * (self.get()[1] - self.get()[0])
+        self.scrollbar = create_rounded_rectangle(self, 0, self.scroll_pos, self.winfo_width(), scrollbar_height, radius=10, fill='#404040', outline='#404040', tags="scrollbar")
+
+    def _start_scroll(self, event):
+        # Запоминаем начальную позицию
+        self.scan_mark(event.x, event.y)
+
+    def _scroll(self, event):
+        # Перетаскивание скроллбара
+        self.scan_dragto(event.x, event.y, gain=1)
+        self._update_scrollbar()
+
+    def set(self, lo, hi):
+        # Обновляем позицию скроллбара на основе переданных значений
+        self.scroll_pos = float(lo) * self.winfo_height()
+        self.coords(self.scrollbar, 0, self.scroll_pos, self.winfo_width(), float(hi) * self.winfo_height())
+        self._update_scrollbar()
+
+    def get(self):
+        # Возвращаем позицию скроллбара в формате (lo, hi)
+        return self.coords(self.scrollbar)

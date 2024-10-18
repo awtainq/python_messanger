@@ -1,11 +1,12 @@
 from tkinter import *
 from tkinter import messagebox
+from tkinter import ttk
 from tkinter.simpledialog import askstring
 import datetime
 from database import DatabaseManager
 from message_verify import check_message
 import json
-from messages import generate_message_canvas, generate_comment_canvas, generate_buttton, generate_chatname
+from messages import generate_message_canvas, generate_comment_canvas, generate_buttton, generate_chatname, CustomScrollbar
 
 db = DatabaseManager('users.db')
 
@@ -46,14 +47,32 @@ class Messenger:
         self.chat_list_frame = Frame(self.chat_list_canvas, bg='#262626')
         self.chat_list_canvas.create_window((0, 0), window=self.chat_list_frame, anchor='nw')
 
-        self.scrollbar = Scrollbar(self.left_frame, orient=VERTICAL, command=self.chat_list_canvas.yview, bg='#262626')
+        style = ttk.Style()
+        style.theme_use('default')
+        style.configure("Custom.Vertical.TScrollbar",
+                        background="#404040",
+                        troughcolor="#262626",
+                        gripcount=0,
+                        borderwidth=0,
+                        padding=0,
+                        relief="flat",
+                        bordercolor="#262626",
+                        arrowcolor="#262626")
+        style.layout("Custom.Vertical.TScrollbar",
+                     [('Vertical.Scrollbar.trough',
+                       {'children': [('Vertical.Scrollbar.thumb', {'expand': '1', 'sticky': 'nswe'})],
+                        'sticky': 'ns'})])
+        style.map("Custom.Vertical.TScrollbar",
+                  background=[('active', '#404040')])
+                
+        self.scrollbar = ttk.Scrollbar(self.left_frame, orient=VERTICAL, command=self.chat_list_canvas.yview, style="Custom.Vertical.TScrollbar")
         self.scrollbar.grid(row=0, column=1, sticky='ns')
         
         self.chat_list_canvas.config(yscrollcommand=self.scrollbar.set)
         self.chat_list_frame.bind('<Configure>', lambda e: self.chat_list_canvas.config(scrollregion=self.chat_list_canvas.bbox('all')))
 
-        self.canvas = Canvas(self.right_frame, bg='#262626')
-        self.scroll_y = Scrollbar(self.right_frame, orient="vertical", command=self.canvas.yview, bg='#262626')
+        self.canvas = Canvas(self.right_frame, bg='#262626', highlightthickness=0)
+        self.scroll_y = ttk.Scrollbar(self.right_frame, orient="vertical", command=self.canvas.yview, style="Custom.Vertical.TScrollbar")
         self.scroll_y.grid(row=0, column=1, sticky='ns')
     
         self.messages_frame = Frame(self.canvas, bg='#262626')
