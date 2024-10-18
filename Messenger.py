@@ -5,9 +5,10 @@ import datetime
 from database import DatabaseManager
 from message_verify import check_message
 import json
-from messages import generate_message_canvas
+from messages import generate_message_canvas, generate_comment_canvas, generate_buttton
 
 db = DatabaseManager('users.db')
+
 
 class Messenger:
     def __init__(self, root, user_id, username):
@@ -15,7 +16,8 @@ class Messenger:
         self.user_id = user_id
         self.username = username
         self.root.title(f'{username} - Messenger')
-        self.center_window(1200, 600)
+        self.center_window(900, 600)
+        self.root.configure(bg='#262626')
 
         self.current_chat_id = None
         self.scroll_positions = {}
@@ -23,49 +25,49 @@ class Messenger:
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
 
-        self.left_frame = Frame(root)
+        self.left_frame = Frame(root, bg='#262626')
         self.left_frame.grid(row=0, column=0, sticky='ns')
         self.left_frame.grid_rowconfigure(0, weight=1)
         self.left_frame.grid_columnconfigure(0, weight=1)
 
-        self.right_frame = Frame(root)
+        self.right_frame = Frame(root, bg='#262626')
         self.right_frame.grid(row=0, column=1, sticky='nsew')
         self.right_frame.grid_rowconfigure(0, weight=1)
         self.right_frame.grid_columnconfigure(0, weight=1)
 
-        self.button = Button(self.left_frame, text='New Chat', command=self.newchat)
+        self.button = generate_buttton(self.left_frame, text='New Chat', command=self.newchat)
         self.button.grid(row=1, column=0, padx=10, pady=10)
 
         self.root.bind('<Return>', lambda event: self.send_message())
 
-        self.chat_listbox = Listbox(self.left_frame)
+        self.chat_listbox = Listbox(self.left_frame, bg='#262626', fg='white', selectbackground='#333333', highlightbackground='#262626', bd=0)
         self.chat_listbox.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
 
-        self.scrollbar = Scrollbar(self.left_frame, orient=VERTICAL)
+        self.scrollbar = Scrollbar(self.left_frame, orient=VERTICAL, bg='#262626')
         self.scrollbar.config(command=self.chat_listbox.yview)
         self.chat_listbox.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.grid(row=0, column=1, sticky='ns')
 
         self.chat_listbox.bind('<<ListboxSelect>>', self.open_chat)
 
-        self.canvas = Canvas(self.right_frame)
-        self.scroll_y = Scrollbar(self.right_frame, orient="vertical", command=self.canvas.yview)
+        self.canvas = Canvas(self.right_frame, bg='#262626')
+        self.scroll_y = Scrollbar(self.right_frame, orient="vertical", command=self.canvas.yview, bg='#262626')
         self.scroll_y.grid(row=0, column=1, sticky='ns')
     
-        self.messages_frame = Frame(self.canvas)
+        self.messages_frame = Frame(self.canvas, bg='#262626')
         self.canvas.create_window((0, 0), window=self.messages_frame, anchor='nw')
         self.canvas.config(yscrollcommand=self.scroll_y.set)
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        self.input_frame = Frame(self.right_frame)
+        self.input_frame = Frame(self.right_frame, bg='#262626')
         self.input_frame.grid(row=1, column=0, sticky='ew', padx=10, pady=10)
         self.input_frame.grid_columnconfigure(0, weight=1)
 
-        self.message_entry = Entry(self.input_frame)
+        self.message_entry = Entry(self.input_frame, bg='#262626', fg='white', insertbackground='white', bd=0)
         self.message_entry.grid(row=0, column=0, sticky='ew')
 
-        self.send_button = Button(self.input_frame, text='Send', command=self.send_message)
-        self.send_button.grid(row=0, column=1)
+        self.send_button = generate_buttton(self.input_frame, text='Send', command=self.send_message)
+        self.send_button.grid(row=0, column=1, columnspan=2, padx=10, sticky='e')
 
         self.message_entry.config(state='normal')
         self.send_button.config(state='normal')
@@ -122,7 +124,6 @@ class Messenger:
     def load_messages(self, chat_id):
         if self.current_chat_id is not None:
             self.scroll_positions[self.current_chat_id] = self.canvas.yview()
-            print(self.scroll_positions)
 
         for widget in self.messages_frame.winfo_children():
             widget.destroy()
@@ -135,7 +136,10 @@ class Messenger:
         """, (self.current_chat_id,)).fetchall()
 
         for message_text, sender_login, message_time, message_id in messages:
-            generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text, self.get_likes_count(message_id), 0, lambda mid=message_id: self.like_message(mid, self.user_id), 1+1).pack()
+            comment_count=len(self.get_comments(message_id))
+            generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text, self.get_likes_count(message_id), comment_count, lambda mid=message_id: self.like_message(mid, self.user_id), lambda mid=message_id: self.comment_message(mid)).pack(padx=3, pady=2)
+            for comment in self.get_comments(message_id):
+                generate_comment_canvas(self.messages_frame, self.root.winfo_width()-350, f'{comment['user']}:', comment['time'][:-10], comment['text']).pack(anchor='e', padx=3, pady=2)
 
         self.canvas.update_idletasks()
         self.message_entry.focus_set()
@@ -202,13 +206,13 @@ class Messenger:
 
     def get_comments(self, message_id):
         comments = db.cursor.execute("""
-            SELECT Comments.comment, Users.login
+            SELECT Comments.comment, Users.login, Comments.time
             FROM Comments 
             JOIN Users ON Comments.user_id = Users.user_id 
             WHERE Comments.message_id = ? 
             ORDER BY Comments.time
         """, (message_id,)).fetchall()
-        return [{'text': comment_text, 'user': user_login} for comment_text, user_login in comments]
+        return [{'text': comment_text, 'user': user_login, 'time': comment_time} for comment_text, user_login, comment_time in comments]
 
     def comment_message(self, message_id):
         comment_text = askstring("Add Comment", "Enter your comment:")
@@ -241,7 +245,6 @@ class Messenger:
 
 if __name__ == '__main__':
     root = Tk()
-    root.grid_rowconfigure(0, weight=1)
-    root.grid_columnconfigure(1, weight=1)
+
     Messenger(root, 1, 'admin')
     root.mainloop()

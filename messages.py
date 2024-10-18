@@ -47,10 +47,10 @@ def generate_message_canvas(root, width, sender, time, text, likes, comments, li
     height = text_height + 95
 
     # Создание основного Canvas
-    canvas = tk.Canvas(root, width=width, height=height)
+    canvas = tk.Canvas(root, width=width, height=height, bg='#262626',highlightthickness=0)
     
     # Создание фона сообщения с закругленными углами
-    create_rounded_rectangle(canvas, 5, 5, width, height, radius=20, fill='#404040')
+    create_rounded_rectangle(canvas, 5, 5, width, height, radius=20, fill='#404040', outline='#404040')
 
     # Добавление метки с ником отправителя
     sender_label = tk.Label(canvas, text=sender, font=("Helvetica", 13, "bold"), bg='#404040')
@@ -74,3 +74,44 @@ def generate_message_canvas(root, width, sender, time, text, likes, comments, li
 
     return canvas
 
+def generate_comment_canvas(root, width, sender, time, text):
+    # Создание временного окна для вычисления высоты текста
+    temp_root = tk.Toplevel(root)
+    temp_root.withdraw()  # Скрыть временное окно
+
+    temp_canvas = tk.Canvas(temp_root, width=width, bg='#262626')
+    temp_text_label = tk.Label(temp_canvas, text=text, font=("Helvetica", 12), wraplength=width - 20, justify='left')
+    temp_text_label.update_idletasks()
+    text_height = temp_text_label.winfo_reqheight()
+
+    # Высота сообщения с учетом высоты текста и дополнительных элементов
+    height = text_height + 50
+
+    # Создание основного Canvas
+    canvas = tk.Canvas(root, width=width, height=height, bg='#262626', highlightthickness=0)
+    
+    # Создание фона сообщения с закругленными углами
+    create_rounded_rectangle(canvas, 5, 5, width-5, height-5, radius=20, fill='#404040', outline='#404040')
+
+    # Добавление метки с ником отправителя
+    sender_label = tk.Label(canvas, text=sender, font=("Helvetica", 13, "bold"), bg='#404040')
+    canvas.create_window(15, 10, anchor='nw', window=sender_label)
+
+    # Добавление метки с временем отправки
+    time_label = tk.Label(canvas, text=time, font=("Helvetica", 11), bg='#404040')
+    canvas.create_window(width - 10, 10, anchor='ne', window=time_label)
+
+    # Добавление метки с текстом сообщения
+    text_label = tk.Label(canvas, text=text, font=("Helvetica", 13), bg='#404040', wraplength=width - 20, justify='left')
+    canvas.create_window(15, 40, anchor='nw', window=text_label)
+
+    temp_root.destroy()  # Уничтожить временное окно
+
+    return canvas
+
+def generate_buttton(root, text, command):
+    button = tk.Canvas(root, width=100, height=30, bg='#262626', highlightthickness=0)
+    create_rounded_rectangle(button, 0, 0, 100, 30, radius=15, fill='#404040', outline='#404040')
+    button.create_text(50, 15, text=text, font=("Helvetica", 12, "bold"), fill='white')
+    button.bind("<Button-1>", lambda e: command())
+    return button
