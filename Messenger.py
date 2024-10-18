@@ -137,7 +137,6 @@ class Messenger:
     def open_chat(self, chat_id):
         self.canvas.yview_moveto(0)
         self.load_messages(chat_id)
-        self.current_chat_id = chat_id
 
         self.canvas.update_idletasks()
         messages_height = sum([widget.winfo_height() for widget in self.messages_frame.winfo_children()])
@@ -150,6 +149,7 @@ class Messenger:
     def load_messages(self, chat_id):
         if self.current_chat_id == chat_id:
             self.scroll_positions[self.current_chat_id] = self.canvas.yview()
+        self.current_chat_id = chat_id
         for widget in self.messages_frame.winfo_children():
             widget.destroy()
         messages = db.cursor.execute("""

@@ -47,13 +47,13 @@ def generate_message_canvas(root, width, sender, time, text, likes, comments, li
     
     create_rounded_rectangle(canvas, 5, 5, width, height, radius=20, fill='#404040', outline='#404040')
 
-    sender_label = tk.Label(canvas, text=sender, font=("Helvetica", 13, "bold"), bg='#404040')
+    sender_label = tk.Label(canvas, text=sender, font=("Helvetica", 13, "bold"), bg='#404040', fg='white')
     canvas.create_window(15, 10, anchor='nw', window=sender_label)
 
-    time_label = tk.Label(canvas, text=time, font=("Helvetica", 11), bg='#404040')
+    time_label = tk.Label(canvas, text=time, font=("Helvetica", 11), bg='#404040', fg='white')
     canvas.create_window(width - 10, 10, anchor='ne', window=time_label)
 
-    text_label = tk.Label(canvas, text=text, font=("Helvetica", 13), bg='#404040', wraplength=width - 20, justify='left')
+    text_label = tk.Label(canvas, text=text, font=("Helvetica", 13), bg='#404040', wraplength=width - 20, justify='left', fg='white')
     canvas.create_window(15, 40, anchor='nw', window=text_label)
 
     create_custom_button(canvas, 15, height - 40, 60, 30, f'♥️ {likes}', command=like_command)
@@ -79,13 +79,13 @@ def generate_comment_canvas(root, width, sender, time, text):
     
     create_rounded_rectangle(canvas, 5, 5, width-5, height-5, radius=20, fill='#404040', outline='#404040')
 
-    sender_label = tk.Label(canvas, text=sender, font=("Helvetica", 13, "bold"), bg='#404040')
+    sender_label = tk.Label(canvas, text=sender, font=("Helvetica", 13, "bold"), bg='#404040', fg='white')
     canvas.create_window(15, 10, anchor='nw', window=sender_label)
 
-    time_label = tk.Label(canvas, text=time, font=("Helvetica", 11), bg='#404040')
+    time_label = tk.Label(canvas, text=time, font=("Helvetica", 11), bg='#404040', fg='white')
     canvas.create_window(width - 10, 10, anchor='ne', window=time_label)
 
-    text_label = tk.Label(canvas, text=text, font=("Helvetica", 13), bg='#404040', wraplength=width - 20, justify='left')
+    text_label = tk.Label(canvas, text=text, font=("Helvetica", 13), bg='#404040', wraplength=width - 20, justify='left', fg='white')
     canvas.create_window(15, 40, anchor='nw', window=text_label)
 
     temp_root.destroy()
