@@ -5,7 +5,7 @@ import datetime
 from database import DatabaseManager
 from message_verify import check_message
 import json
-from messages import generate_message_canvas, generate_comment_canvas, generate_buttton
+from messages import generate_message_canvas, generate_comment_canvas, generate_buttton, generate_chatname
 
 db = DatabaseManager('users.db')
 
@@ -36,19 +36,21 @@ class Messenger:
         self.right_frame.grid_columnconfigure(0, weight=1)
 
         self.button = generate_buttton(self.left_frame, text='New Chat', command=self.newchat)
-        self.button.grid(row=1, column=0, padx=10, pady=10)
+        self.button.grid(row=1, column=0, padx=30, pady=11, sticky='ws')
 
         self.root.bind('<Return>', lambda event: self.send_message())
 
-        self.chat_listbox = Listbox(self.left_frame, bg='#262626', fg='white', selectbackground='#333333', highlightbackground='#262626', bd=0)
-        self.chat_listbox.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
+        self.chat_list_canvas = Canvas(self.left_frame, bg='#262626', highlightthickness=0,width=160)
+        self.chat_list_canvas.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
 
-        self.scrollbar = Scrollbar(self.left_frame, orient=VERTICAL, bg='#262626')
-        self.scrollbar.config(command=self.chat_listbox.yview)
-        self.chat_listbox.config(yscrollcommand=self.scrollbar.set)
+        self.chat_list_frame = Frame(self.chat_list_canvas, bg='#262626')
+        self.chat_list_canvas.create_window((0, 0), window=self.chat_list_frame, anchor='nw')
+
+        self.scrollbar = Scrollbar(self.left_frame, orient=VERTICAL, command=self.chat_list_canvas.yview, bg='#262626')
         self.scrollbar.grid(row=0, column=1, sticky='ns')
-
-        self.chat_listbox.bind('<<ListboxSelect>>', self.open_chat)
+        
+        self.chat_list_canvas.config(yscrollcommand=self.scrollbar.set)
+        self.chat_list_frame.bind('<Configure>', lambda e: self.chat_list_canvas.config(scrollregion=self.chat_list_canvas.bbox('all')))
 
         self.canvas = Canvas(self.right_frame, bg='#262626')
         self.scroll_y = Scrollbar(self.right_frame, orient="vertical", command=self.canvas.yview, bg='#262626')
@@ -67,7 +69,7 @@ class Messenger:
         self.message_entry.grid(row=0, column=0, sticky='ew')
 
         self.send_button = generate_buttton(self.input_frame, text='Send', command=self.send_message)
-        self.send_button.grid(row=0, column=1, columnspan=2, padx=10, sticky='e')
+        self.send_button.grid(row=0, column=1, columnspan=2, padx=10, sticky='es')
 
         self.message_entry.config(state='normal')
         self.send_button.config(state='normal')
@@ -79,7 +81,10 @@ class Messenger:
         self.messages_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
         self.canvas.bind("<Enter>", lambda e: self._bind_mousewheel())
         self.canvas.bind("<Leave>", lambda e: self._unbind_mousewheel())
-
+        
+        self.chat_list_canvas.bind("<Enter>", lambda e: self._bind_mousewheel_chat_list())
+        self.chat_list_canvas.bind("<Leave>", lambda e: self._unbind_mousewheel_chat_list())
+        
     def center_window(self, width, height):
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
@@ -98,28 +103,25 @@ class Messenger:
             messagebox.showwarning('Chat Adding', 'Chat name cannot be empty')
 
     def refresh_chat_list(self):
-        self.chat_listbox.delete(0, END)
-        self.chat_ids = []
+        for widget in self.chat_list_frame.winfo_children():
+            widget.destroy()
         chat_names = db.cursor.execute("SELECT name, id FROM Chats").fetchall()
         for chat_name, chat_id in chat_names:
-            self.chat_listbox.insert(END, chat_name)
-            self.chat_ids.append(chat_id)
+            generate_chatname(self.chat_list_frame, chat_name, lambda cid=chat_id: self.open_chat(cid)).pack(padx=3, pady=2)
 
-    def open_chat(self, event):
-        selection = self.chat_listbox.curselection()
-        if selection:
-            index = selection[0]
-            self.current_chat_id = self.chat_ids[index]
-            self.load_messages(self.current_chat_id)
-            self.message_entry.config(state='normal')
-            self.send_button.config(state='normal')
-            self.root.after(100, self.message_entry.focus_set)
+    def open_chat(self, chat_id):
+        if self.current_chat_id is not None:
+            self.scroll_positions[self.current_chat_id] = self.canvas.yview()
+
+        self.current_chat_id = chat_id
+        self.load_messages(chat_id)
+
+        self.canvas.update_idletasks()  # Обновление содержимого Canvas
+
+        if chat_id in self.scroll_positions:
+            self.canvas.yview_moveto(self.scroll_positions[chat_id][0])
         else:
-            self.current_chat_id = None
-            for widget in self.messages_frame.winfo_children():
-                widget.destroy()
-            self.message_entry.config(state='disabled')
-            self.send_button.config(state='disabled')
+            self.scroll_to_bottom()
 
     def load_messages(self, chat_id):
         if self.current_chat_id is not None:
@@ -160,8 +162,6 @@ class Messenger:
             else:
                 self.canvas.yview_moveto(0)
 
-
-
     def _bind_mousewheel(self):
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
         self.canvas.bind_all("<Button-4>", self._on_mousewheel)
@@ -172,16 +172,37 @@ class Messenger:
         self.canvas.unbind_all("<Button-4>")
         self.canvas.unbind_all("<Button-5>")
 
+    def _bind_mousewheel_chat_list(self):
+        self.chat_list_canvas.bind_all("<MouseWheel>", self._on_mousewheel_chat_list)
+        self.chat_list_canvas.bind_all("<Button-4>", self._on_mousewheel_chat_list)
+        self.chat_list_canvas.bind_all("<Button-5>", self._on_mousewheel_chat_list)
+
+    def _unbind_mousewheel_chat_list(self):
+        self.chat_list_canvas.unbind_all("<MouseWheel>")
+        self.chat_list_canvas.unbind_all("<Button-4>")
+        self.chat_list_canvas.unbind_all("<Button-5>")
+
     def _on_mousewheel(self, event):
         if event.delta:
             delta = event.delta
         else:
             delta = -120 if event.num == 5 else 120
         current_view = self.canvas.yview()
-        if delta > 0 and current_view[0] > 0: 
+        if delta > 0 and current_view[0] > 0:
             self.canvas.yview_scroll(-1, "units")
         elif delta < 0 and current_view[1] < 1:
             self.canvas.yview_scroll(1, "units")
+
+    def _on_mousewheel_chat_list(self, event):
+        if event.delta:
+            delta = event.delta
+        else:
+            delta = -120 if event.num == 5 else 120
+        current_view = self.chat_list_canvas.yview()
+        if delta > 0 and current_view[0] > 0:
+            self.chat_list_canvas.yview_scroll(-1, "units")
+        elif delta < 0 and current_view[1] < 1:
+            self.chat_list_canvas.yview_scroll(1, "units")
 
     def like_message(self, message_id, user_id):
         db.cursor.execute("SELECT likes FROM Messages WHERE id = ?", (message_id,))

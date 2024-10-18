@@ -115,3 +115,27 @@ def generate_buttton(root, text, command):
     button.create_text(50, 15, text=text, font=("Helvetica", 12, "bold"), fill='white')
     button.bind("<Button-1>", lambda e: command())
     return button
+
+
+def generate_chatname(root, name, command):
+    chatname = tk.Canvas(root, width=150, height=50, bg='#262626', highlightthickness=0)
+    create_rounded_rectangle(chatname, 0, 0, 150, 50, radius=15, fill='#404040', outline='#404040')
+    truncated_name = truncate_text(name, 140, ("Helvetica", 12, "bold"), chatname)
+    chatname.create_text(75, 25, text=truncated_name, font=("Helvetica", 12, "bold"), fill='white', anchor='center')
+    chatname.bind("<Button-1>", lambda e: command())
+    return chatname
+
+def truncate_text(text, max_width, font, canvas):
+    words = text.split()
+    truncated_text = ""
+    for word in words:
+        test_text = truncated_text + " " + word if truncated_text else word
+        temp_text_id = canvas.create_text(0, 0, text=test_text, font=font, anchor='nw')
+        bbox = canvas.bbox(temp_text_id)
+        canvas.delete(temp_text_id)
+        if bbox[2] > max_width:
+            if truncated_text:
+                truncated_text += "..."
+            break
+        truncated_text = test_text
+    return truncated_text
