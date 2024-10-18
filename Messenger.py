@@ -6,7 +6,7 @@ import datetime
 from database import DatabaseManager
 from message_verify import check_message
 import json
-from messages import generate_message_canvas, generate_comment_canvas, generate_buttton, generate_chatname, CustomScrollbar
+from messages import generate_message_canvas, generate_comment_canvas, generate_buttton, generate_chatname
 
 db = DatabaseManager('users.db')
 
@@ -19,7 +19,10 @@ class Messenger:
         self.root.title(f'{username} - Messenger')
         self.center_window(900, 600)
         self.root.configure(bg='#262626')
+        self.root.minsize(600, 250)
 
+        self.menu = Menu(self.root, bg='#262626', fg='white')
+        
         self.current_chat_id = None
         self.scroll_positions = {}
         
@@ -113,7 +116,10 @@ class Messenger:
 
     def newchat(self):
         chatname = askstring('New Chat', 'Enter chat name')
-        if chatname:
+        if chatname is None:
+            # Пользователь нажал "Cancel"
+            return
+        elif chatname.strip():
             db.cursor.execute("INSERT INTO Chats (name) VALUES (?)", (chatname,))
             db.commit()
             messagebox.showinfo('Chat Adding', 'Success')
@@ -129,23 +135,21 @@ class Messenger:
             generate_chatname(self.chat_list_frame, chat_name, lambda cid=chat_id: self.open_chat(cid)).pack(padx=3, pady=2)
 
     def open_chat(self, chat_id):
-        if self.current_chat_id is not None:
-            self.scroll_positions[self.current_chat_id] = self.canvas.yview()
-
-        self.current_chat_id = chat_id
+        self.canvas.yview_moveto(0)
         self.load_messages(chat_id)
+        self.current_chat_id = chat_id
 
-        self.canvas.update_idletasks()  # Обновление содержимого Canvas
-
-        if chat_id in self.scroll_positions:
-            self.canvas.yview_moveto(self.scroll_positions[chat_id][0])
+        self.canvas.update_idletasks()
+        messages_height = sum([widget.winfo_height() for widget in self.messages_frame.winfo_children()])
+        if messages_height > self.canvas.winfo_height():
+            self.canvas.yview_moveto(1)
         else:
-            self.scroll_to_bottom()
+            self.canvas.yview_moveto(0) 
+
 
     def load_messages(self, chat_id):
-        if self.current_chat_id is not None:
+        if self.current_chat_id == chat_id:
             self.scroll_positions[self.current_chat_id] = self.canvas.yview()
-
         for widget in self.messages_frame.winfo_children():
             widget.destroy()
         messages = db.cursor.execute("""
@@ -164,22 +168,7 @@ class Messenger:
 
         self.canvas.update_idletasks()
         self.message_entry.focus_set()
-
-        bbox = self.canvas.bbox("all")
-        if chat_id in self.scroll_positions:
-            self.canvas.yview_moveto(self.scroll_positions[chat_id][0])
-        else:
-            self.scroll_to_bottom()
-
-    def scroll_to_bottom(self):
-        bbox = self.canvas.bbox('all')
-        if bbox:
-            canvas_height = self.canvas.winfo_height()
-            content_height = bbox[3] - bbox[1]
-            if content_height > canvas_height:
-                self.canvas.yview_moveto(1)
-            else:
-                self.canvas.yview_moveto(0)
+        self.canvas.yview_moveto(self.scroll_positions[chat_id][0] if chat_id in self.scroll_positions else 1)
 
     def _bind_mousewheel(self):
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
@@ -262,7 +251,6 @@ class Messenger:
                 db.cursor.execute("INSERT INTO Comments (message_id, comment, user_id, time) VALUES (?, ?, ?, ?)",
                                 (message_id, comment_text, self.user_id, current_time))
                 db.commit()
-                messagebox.showinfo("Comment", "Comment added successfully")
                 self.load_messages(self.current_chat_id)
             else: messagebox.showwarning("Warning",)
         else:
@@ -278,6 +266,7 @@ class Messenger:
                 db.commit()
                 self.message_entry.delete(0, END)
                 self.load_messages(self.current_chat_id)
+                self.canvas.yview_moveto(1)
             else:
                 messagebox.showwarning("Warning", "Message contains forbidden words")
         else:
