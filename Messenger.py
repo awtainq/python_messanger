@@ -40,11 +40,11 @@ class Messenger:
         self.right_frame.grid_columnconfigure(0, weight=1)
 
         self.button = generate_buttton(self.left_frame, text='New Chat', command=self.newchat)
-        self.button.grid(row=1, column=0, padx=30, pady=13, sticky='ws')
+        self.button.grid(row=1, column=0, padx=15, pady=11, sticky='ws')
 
         self.root.bind('<Return>', lambda event: self.send_message())
 
-        self.chat_list_canvas = Canvas(self.left_frame, bg='#262626', highlightthickness=0,width=160)
+        self.chat_list_canvas = Canvas(self.left_frame, bg='#262626', highlightthickness=0,width=155)
         self.chat_list_canvas.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
 
         self.chat_list_frame = Frame(self.chat_list_canvas, bg='#262626')
@@ -69,7 +69,7 @@ class Messenger:
                   background=[('active', '#404040')])
                 
         self.scrollbar = ttk.Scrollbar(self.left_frame, orient=VERTICAL, command=self.chat_list_canvas.yview, style="Custom.Vertical.TScrollbar")
-        self.scrollbar.grid(row=0, column=1, sticky='ns')
+        self.scrollbar.grid(row=0, column=1, sticky='wns')
         
         self.chat_list_canvas.config(yscrollcommand=self.scrollbar.set)
         self.chat_list_frame.bind('<Configure>', lambda e: self.chat_list_canvas.config(scrollregion=self.chat_list_canvas.bbox('all')))
@@ -91,7 +91,7 @@ class Messenger:
         self.message_entry.grid(row=0, column=0, sticky='ew')
 
         self.send_button = generate_buttton(self.input_frame, text='Send', command=self.send_message)
-        self.send_button.grid(row=0, column=1, columnspan=2, padx=10, pady=3, sticky='es')
+        self.send_button.grid(row=0, column=1, columnspan=2, padx=10, sticky='es')
 
         self.message_entry.config(state='normal')
         self.send_button.config(state='normal')
@@ -160,9 +160,9 @@ class Messenger:
 
         for message_text, sender_login, message_time, message_id in messages:
             comment_count=len(self.get_comments(message_id))
-            generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text, self.get_likes_count(message_id), comment_count, lambda mid=message_id: self.like_message(mid, self.user_id), lambda mid=message_id: self.comment_message(mid)).pack(padx=3, pady=2)
+            generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text, self.get_likes_count(message_id), comment_count, lambda mid=message_id: self.like_message(mid, self.user_id), lambda mid=message_id: self.comment_message(mid)).pack(padx=10, pady=2)
             for comment in self.get_comments(message_id):
-                generate_comment_canvas(self.messages_frame, self.root.winfo_width()-350, f'{comment['user']}:', comment['time'][:-10], comment['text']).pack(anchor='e', padx=2, pady=2)
+                generate_comment_canvas(self.messages_frame, self.root.winfo_width()-350, f'{comment['user']}:', comment['time'][:-10], comment['text']).pack(anchor='e', padx=7, pady=0)
 
         self.canvas.update_idletasks()
         self.message_entry.focus_set()
@@ -170,36 +170,26 @@ class Messenger:
 
     def _bind_mousewheel(self):
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        self.canvas.bind_all("<Button-4>", self._on_mousewheel)
-        self.canvas.bind_all("<Button-5>", self._on_mousewheel)
-
+        
     def _unbind_mousewheel(self):
         self.canvas.unbind_all("<MouseWheel>")
-        self.canvas.unbind_all("<Button-4>")
-        self.canvas.unbind_all("<Button-5>")
 
     def _bind_mousewheel_chat_list(self):
         self.chat_list_canvas.bind_all("<MouseWheel>", self._on_mousewheel_chat_list)
-        self.chat_list_canvas.bind_all("<Button-4>", self._on_mousewheel_chat_list)
-        self.chat_list_canvas.bind_all("<Button-5>", self._on_mousewheel_chat_list)
 
     def _unbind_mousewheel_chat_list(self):
         self.chat_list_canvas.unbind_all("<MouseWheel>")
-        self.chat_list_canvas.unbind_all("<Button-4>")
-        self.chat_list_canvas.unbind_all("<Button-5>")
 
     def _on_mousewheel(self, event):
         if event.delta:
             delta = event.delta
         else:
-            delta = -120 if event.num == 5 else 120
+            delta = -120 if event.num == 4 else 120
         current_view = self.canvas.yview()
         if delta > 0 and current_view[0] > 0:
             self.canvas.yview_scroll(-1, "units")
-            self.canvas.bind_all("<Button-4>", self._on_mousewheel)
         elif delta < 0 and current_view[1] < 1:
             self.canvas.yview_scroll(1, "units")
-            self.canvas.bind_all("<Button-5>", self._on_mousewheel)
 
     def _on_mousewheel_chat_list(self, event):
         if event.delta:
