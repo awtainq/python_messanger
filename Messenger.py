@@ -10,7 +10,6 @@ from messages import generate_message_canvas, generate_comment_canvas, generate_
 
 db = DatabaseManager('users.db')
 
-
 class Messenger:
     def __init__(self, root, user_id, username):
         self.root = root
@@ -25,6 +24,7 @@ class Messenger:
         
         self.current_chat_id = None
         self.scroll_positions = {}
+        self.window_size = (self.root.winfo_width(), self.root.winfo_height())
         
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
@@ -40,7 +40,7 @@ class Messenger:
         self.right_frame.grid_columnconfigure(0, weight=1)
 
         self.button = generate_buttton(self.left_frame, text='New Chat', command=self.newchat)
-        self.button.grid(row=1, column=0, padx=30, pady=11, sticky='ws')
+        self.button.grid(row=1, column=0, padx=30, pady=13, sticky='ws')
 
         self.root.bind('<Return>', lambda event: self.send_message())
 
@@ -91,7 +91,7 @@ class Messenger:
         self.message_entry.grid(row=0, column=0, sticky='ew')
 
         self.send_button = generate_buttton(self.input_frame, text='Send', command=self.send_message)
-        self.send_button.grid(row=0, column=1, columnspan=2, padx=10, sticky='es')
+        self.send_button.grid(row=0, column=1, columnspan=2, padx=10, pady=3, sticky='es')
 
         self.message_entry.config(state='normal')
         self.send_button.config(state='normal')
@@ -117,7 +117,6 @@ class Messenger:
     def newchat(self):
         chatname = askstring('New Chat', 'Enter chat name')
         if chatname is None:
-            # Пользователь нажал "Cancel"
             return
         elif chatname.strip():
             db.cursor.execute("INSERT INTO Chats (name) VALUES (?)", (chatname,))
@@ -126,7 +125,7 @@ class Messenger:
             self.refresh_chat_list()
         else:
             messagebox.showwarning('Chat Adding', 'Chat name cannot be empty')
-
+    
     def refresh_chat_list(self):
         for widget in self.chat_list_frame.winfo_children():
             widget.destroy()
@@ -144,7 +143,6 @@ class Messenger:
             self.canvas.yview_moveto(1)
         else:
             self.canvas.yview_moveto(0) 
-
 
     def load_messages(self, chat_id):
         if self.current_chat_id == chat_id:
@@ -164,7 +162,7 @@ class Messenger:
             comment_count=len(self.get_comments(message_id))
             generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text, self.get_likes_count(message_id), comment_count, lambda mid=message_id: self.like_message(mid, self.user_id), lambda mid=message_id: self.comment_message(mid)).pack(padx=3, pady=2)
             for comment in self.get_comments(message_id):
-                generate_comment_canvas(self.messages_frame, self.root.winfo_width()-350, f'{comment['user']}:', comment['time'][:-10], comment['text']).pack(anchor='e', padx=3, pady=2)
+                generate_comment_canvas(self.messages_frame, self.root.winfo_width()-350, f'{comment['user']}:', comment['time'][:-10], comment['text']).pack(anchor='e', padx=2, pady=2)
 
         self.canvas.update_idletasks()
         self.message_entry.focus_set()
@@ -198,8 +196,10 @@ class Messenger:
         current_view = self.canvas.yview()
         if delta > 0 and current_view[0] > 0:
             self.canvas.yview_scroll(-1, "units")
+            self.canvas.bind_all("<Button-4>", self._on_mousewheel)
         elif delta < 0 and current_view[1] < 1:
             self.canvas.yview_scroll(1, "units")
+            self.canvas.bind_all("<Button-5>", self._on_mousewheel)
 
     def _on_mousewheel_chat_list(self, event):
         if event.delta:
@@ -274,6 +274,5 @@ class Messenger:
 
 if __name__ == '__main__':
     root = Tk()
-
     Messenger(root, 1, 'admin')
     root.mainloop()
