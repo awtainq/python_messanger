@@ -47,6 +47,7 @@ class PasswordManger:
             self.password.focus_set()
             self.entry.config(state='readonly')
             self.info_label.config(text='Enter your password:')
+            self.root.bind("<Escape>", lambda e: self.back())
             if db.check_name(self.entry.get()):
                 self.root.bind("<Return>", lambda e: self.in_())
                 self.in_button.grid(row=4, column=1, pady=5, sticky='n')

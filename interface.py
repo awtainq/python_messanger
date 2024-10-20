@@ -25,15 +25,15 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius=25, **kwargs):
     ]
     return canvas.create_polygon(points, **kwargs, smooth=True)
 
-def create_custom_button(canvas, x, y, width, height, text, command):
+def create_custom_button(canvas, x, y, width, height, text, command, color):
     button = tk.Canvas(canvas, width=width, height=height, bg='#404040', highlightthickness=0)
-    create_rounded_rectangle(button, 0, 0, width, height, radius=15, fill='#262626', outline='#262626')
+    create_rounded_rectangle(button, 0, 0, width, height, radius=15, fill=color, outline=color)
     button.create_text(width//2, height//2, text=text, font=("Helvetica", 12, "bold"), fill='white')
     button.bind("<Button-1>", lambda e: command())
     canvas.create_window(x, y, anchor='nw', window=button)
     return button
 
-def generate_message_canvas(root, width, sender, time, text, likes, comments, like_command, comment_command):
+def generate_message_canvas(root, width, sender, time, text, likes, comments, like_command, comment_command, is_like):
     width+=25
     temp_root = tk.Toplevel(root)
     temp_root.withdraw()
@@ -57,9 +57,10 @@ def generate_message_canvas(root, width, sender, time, text, likes, comments, li
     text_label = tk.Label(canvas, text=text, font=("Helvetica", 13), bg='#404040', wraplength=width - 170, justify='left', fg='white')
     canvas.create_window(15, 30, anchor='nw', window=text_label)
 
-    create_custom_button(canvas, width-75-10-66, height - 37, 60, 30, f'♥️ {likes}', command=like_command)
+    like_color = '#99b3e6' if is_like else '#262626'
+    create_custom_button(canvas, width-75-10-66, height - 37, 60, 30, f'♥️ {likes}', command=like_command, color=like_color)
 
-    create_custom_button(canvas, width - 75, height - 37, 60, 30, f'💬 {comments}', command=comment_command)
+    create_custom_button(canvas, width - 75, height - 37, 60, 30, f'💬 {comments}', command=comment_command, color='#262626')
 
     temp_root.destroy() 
 
@@ -100,9 +101,12 @@ def generate_buttton(root, text, command):
     button.bind("<Button-1>", lambda e: command())
     return button
 
-def generate_chatname(root, name, command):
+def generate_chatname(root, name, command, is_active):
     chatname = tk.Canvas(root, width=150, height=50, bg='#262626', highlightthickness=0)
-    create_rounded_rectangle(chatname, 0, 0, 150, 50, radius=15, fill='#404040', outline='#404040')
+    if is_active:
+        create_rounded_rectangle(chatname, 0, 0, 150, 50, radius=15, fill='#99b3e6', outline='#99b3e6')
+    else:
+        create_rounded_rectangle(chatname, 0, 0, 150, 50, radius=15, fill='#404040', outline='#404040')
     truncated_name = truncate_text(name, 140, ("Helvetica", 12, "bold"), chatname)
     chatname.create_text(75, 25, text=truncated_name, font=("Helvetica", 12, "bold"), fill='white', anchor='center')
     chatname.bind("<Button-1>", lambda e: command())

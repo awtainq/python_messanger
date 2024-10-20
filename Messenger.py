@@ -108,11 +108,16 @@ class Messenger:
         for widget in self.chat_list_frame.winfo_children():
             widget.destroy()
         for chat_name, chat_id in db.chat_names_get():
-            generate_chatname(self.chat_list_frame, chat_name, lambda cid=chat_id: self.open_chat(cid)).pack(padx=3, pady=2)
+            is_active = False
+            print(self.current_chat_id==chat_id)
+            if self.current_chat_id == chat_id:
+                is_active = True
+            generate_chatname(self.chat_list_frame, chat_name, lambda cid=chat_id: self.open_chat(cid), is_active).pack(padx=3, pady=2)
 
     def open_chat(self, chat_id):
         self.canvas.yview_moveto(0)
         self.load_messages(chat_id)
+        self.refresh_chat_list()
         self.canvas.update_idletasks()
         messages_height = sum([widget.winfo_height() for widget in self.messages_frame.winfo_children()])
         if messages_height > self.canvas.winfo_height():
@@ -129,7 +134,7 @@ class Messenger:
 
         for message_text, sender_login, message_time, message_id in db.messages_get(self.current_chat_id):
             comment_count=len(db.get_comments(message_id))
-            generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text, db.get_likes_count(message_id), comment_count, lambda mid=message_id: self.like_message(mid, self.user_id), lambda mid=message_id: self.comment_message(mid)).pack(padx=10, pady=2)
+            generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text, db.get_likes_count(message_id), comment_count, lambda mid=message_id: self.like_message(mid, self.user_id), lambda mid=message_id: self.comment_message(mid), db.is_liked(message_id, self.user_id)).pack(padx=10, pady=2)
             for text, user, time in db.get_comments(message_id):
                 generate_comment_canvas(self.messages_frame, self.root.winfo_width()-350, f'{user}:', time[:-10], text).pack(anchor='e', padx=7, pady=0)
 
@@ -197,6 +202,6 @@ class Messenger:
     def like_message(self, message_id, user_id):
         db.like_message(message_id, user_id)
         self.load_messages(self.current_chat_id)
-        
+                
 if __name__ == '__main__':
-    Messenger(0, 'admin').root.mainloop()
+    Messenger(7, 'admin').root.mainloop()

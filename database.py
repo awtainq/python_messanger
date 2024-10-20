@@ -134,6 +134,12 @@ class DatabaseManager:
         self.cursor.execute("INSERT INTO Users (login, password_hash, salt) VALUES (?, ?, ?)", (username, hash_password(password, salt), salt))
         self.commit()
         return self.cursor.execute("SELECT user_id, login FROM Users WHERE login = ?", (username,)).fetchone()
+    
+    def is_liked(self, message_id, user_id):
+        self.cursor.execute("SELECT likes FROM Messages WHERE id = ?", (message_id,))
+        result = self.cursor.fetchone()
+        likes = json.loads(result[0]) if result[0] else []
+        return user_id in likes
 
 def hash_password(password, salt):
         return hashlib.sha256((salt.encode() + password.encode())).hexdigest()
