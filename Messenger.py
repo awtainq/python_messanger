@@ -77,7 +77,7 @@ class Messenger:
         self.input_frame.grid(row=1, column=0, sticky='ew', padx=10, pady=10)
         self.input_frame.grid_columnconfigure(0, weight=1)
 
-        self.message_entry = Entry(self.input_frame, bg='#262626', fg='white', insertbackground='white', bd=0)
+        self.message_entry = Entry(self.input_frame, bg='#262626', fg='white', insertbackground='white', bd=0, state='disabled')
         self.message_entry.grid(row=0, column=0, sticky='ew')
 
         self.send_button = generate_buttton(self.input_frame, text='Send', command=self.send_message)
@@ -115,6 +115,7 @@ class Messenger:
 
     def open_chat(self, chat_id):
         self.canvas.yview_moveto(0)
+        self.message_entry.config(state='normal')
         self.load_messages(chat_id)
         self.refresh_chat_list()
         self.canvas.update_idletasks()
