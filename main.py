@@ -1,7 +1,4 @@
-from tkinter import Tk
-from passwords import PasswordManager
+from auth import PasswordManger
 
 if __name__ == "__main__":
-    root = Tk()
-    app = PasswordManager(root)
-    root.mainloop()
+    PasswordManger().root.mainloop()

@@ -1,5 +1,4 @@
 import tkinter as tk
-from math import floor
 
 def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius=25, **kwargs):
     points = [
@@ -123,3 +122,10 @@ def truncate_text(text, max_width, font, canvas):
             break
         truncated_text = test_text
     return truncated_text
+
+def center_window(root, width, height):
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        root.geometry(f'{width}x{height}+{x}+{y}')
