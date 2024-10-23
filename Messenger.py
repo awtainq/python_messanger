@@ -4,6 +4,7 @@ from tkinter.simpledialog import askstring
 from database import DatabaseManager
 from message_verify import check_message
 from interface import *
+import asyncio
 
 db = DatabaseManager('users.db')
 
@@ -19,7 +20,6 @@ class Messenger:
         
         self.current_chat_id = None
         self.scroll_positions = {}
-        self.window_size = (self.root.winfo_width(), self.root.winfo_height())
         
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
@@ -77,23 +77,33 @@ class Messenger:
         self.input_frame.grid(row=1, column=0, sticky='ew', padx=10, pady=10)
         self.input_frame.grid_columnconfigure(0, weight=1)
 
-        self.message_entry = Entry(self.input_frame, bg='#262626', fg='white', insertbackground='white', bd=0, state='disabled')
-        self.message_entry.grid(row=0, column=0, sticky='ew')
+        self.message_entry = text_canvas(self.input_frame)
+        self.message_entry.canvas.grid(row=0, column=0, sticky='ews')
 
         self.send_button = generate_buttton(self.input_frame, text='Send', command=self.send_message)
         self.send_button.grid(row=0, column=1, columnspan=2, padx=10, sticky='es')
+        
 
         self.chat_ids = []
         self.refresh_chat_list()
+        self.window_size = (self.root.winfo_width(), self.root.winfo_height())
         
-        self.root.bind('<Return>', lambda event: self.send_message())
+        self.root.bind("<Configure>", lambda e: self.on_resize())
+        self.root.bind('<Return>', lambda e: self.send_message())
         self.canvas.bind("<Enter>", lambda e: self._bind_mousewheel())
         self.canvas.bind("<Leave>", lambda e: self._unbind_mousewheel())
         self.chat_list_canvas.bind("<Enter>", lambda e: self._bind_mousewheel_chat_list())
         self.chat_list_canvas.bind("<Leave>", lambda e: self._unbind_mousewheel_chat_list())
         self.messages_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
         self.chat_list_frame.bind('<Configure>', lambda e: self.chat_list_canvas.config(scrollregion=self.chat_list_canvas.bbox('all')))
-
+        
+    def on_resize(self):
+        window_size = (self.root.winfo_width(), self.root.winfo_height())
+        if window_size != self.window_size:
+            self.message_entry.update()
+            self.load_messages(self.current_chat_id)
+            self.window_size = window_size
+        
     def newchat(self):
         chatname = askstring('New Chat', 'Enter chat name')
         if chatname is None:
@@ -115,7 +125,7 @@ class Messenger:
 
     def open_chat(self, chat_id):
         self.canvas.yview_moveto(0)
-        self.message_entry.config(state='normal')
+        self.message_entry.state = 'normal'
         self.load_messages(chat_id)
         self.refresh_chat_list()
         self.canvas.update_idletasks()
@@ -124,15 +134,14 @@ class Messenger:
             self.canvas.yview_moveto(1)
         else:
             self.canvas.yview_moveto(0) 
-
+    
     def load_messages(self, chat_id):
         if self.current_chat_id == chat_id:
             self.scroll_positions[self.current_chat_id] = self.canvas.yview()
-        self.current_chat_id = chat_id
         for widget in self.messages_frame.winfo_children():
             widget.destroy()
 
-        for message_text, sender_login, message_time, message_id in db.messages_get(self.current_chat_id):
+        for message_text, sender_login, message_time, message_id in db.messages_get(chat_id):
             comment_count=len(db.get_comments(message_id))
             generate_message_canvas(self.messages_frame, self.root.winfo_width()-250, sender_login, message_time[:-10], message_text,
                                     db.get_likes_count(message_id), comment_count, lambda mid=message_id: self.like_message(mid, self.user_id),
@@ -140,9 +149,15 @@ class Messenger:
             for text, user, time in db.get_comments(message_id):
                 generate_comment_canvas(self.messages_frame, self.root.winfo_width()-350, f'{user}:', time[:-10], text).pack(anchor='e', padx=7, pady=0)
 
+        self.current_chat_id = chat_id
         self.canvas.update_idletasks()
-        self.message_entry.focus_set()
+        self.message_entry.update()
+        self.message_entry.text.focus_set()
         self.canvas.yview_moveto(self.scroll_positions[chat_id][0] if chat_id in self.scroll_positions else 1)
+    
+    # def periodic_update(self):
+    #     self.load_messages(self.current_chat_id)
+    #     self.root.after(2000, self.periodic_update)
 
     def _bind_mousewheel(self):
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
@@ -193,7 +208,7 @@ class Messenger:
         if message_text.strip():
             if check_message(message_text):
                 db.message_add(self.current_chat_id, message_text, self.user_id)
-                self.message_entry.delete(0, END)
+                self.message_entry.delete()
                 self.load_messages(self.current_chat_id)
                 self.canvas.yview_moveto(1)
             else:

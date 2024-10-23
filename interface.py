@@ -1,4 +1,8 @@
 import tkinter as tk
+from database import DatabaseManager
+
+
+db=DatabaseManager('users.db')
 
 def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius=25, **kwargs):
     points = [
@@ -127,9 +131,44 @@ def truncate_text(text, max_width, font, canvas):
         truncated_text = test_text
     return truncated_text
 
-def center_window(root, width, height):
-        screen_width = root.winfo_screenwidth()
-        screen_height = root.winfo_screenheight()
-        x = (screen_width // 2) - (width // 2)
-        y = (screen_height // 2) - (height // 2)
-        root.geometry(f'{width}x{height}+{x}+{y}')
+def center_window(root, width, height):    
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+    root.geometry(f'{width}x{height}+{x}+{y}')
+    
+class text_canvas:
+    def __init__(self, root):
+        self.root = root
+        self.root.update_idletasks()
+        self.width = root.winfo_width() - 125
+        self.height = 45
+        self.canvas = tk.Canvas(root, bg='#262626', highlightthickness=0, height=self.height+10)
+        self.canvas.pack(expand=True)
+        self.rounded_rect = create_rounded_rectangle(self.canvas, 5, 0, self.width-10, self.height+10, radius=15, fill='#404040', outline='#404040')
+        self.text = tk.Text(self.canvas, bg='#404040', fg='white', insertbackground='white', bd=0, height=3, wrap='word', highlightthickness=0, font=('Arial', 13), state='disabled')
+        self.text.place(x=15, y=5, width=self.width-30, height=self.height)
+        self.state = 'disabled'
+    
+    def get(self):
+        return self.text.get('1.0', 'end-1c')
+    
+    def delete(self):
+        self.text.delete('1.0', 'end')
+        
+    def update(self):
+        text = self.get()
+        self.width = self.width = self.root.winfo_width() - 125
+        self.canvas.delete(self.rounded_rect)
+        self.rounded_rect = create_rounded_rectangle(self.canvas, 5, 0, self.width-10, self.height+10, radius=15, fill='#404040', outline='#404040')
+        self.text.config(state=self.state)
+        self.text.place(x=15, y=5, width=self.width-30, height=self.height)
+
+# root = tk.Tk()
+# canvas = generate_message_canvas(root, 400, 'Sender', 'Time', 'Text', 0, 0, lambda: print('Like'), lambda: print('Comment'), False)
+# canvas.pack()
+# canvas.delete(1)
+# canvas.config(width=600)
+# create_rounded_rectangle(canvas, 5, 5, 600, 50, radius=20, fill='#404040', outline='#404040')
+# root.mainloop()
